@@ -29,9 +29,9 @@ const int Y1_SWITCH_PORT = 17;
 const int Y2_SWITCH_PORT = 18;
 
 // Global Position
-int x; // steps from zero position
-int y; // steps from zero position
-int z; // 0 = down, 1 = half up, 2 = full up
+int x_pos; // steps from zero position
+int y_pos; // steps from zero position
+int z_pos; // 0 = full up, 1 = half up, 2 = down
 
 // zeros out x & y axis (not z)
 // return true when complete, false if something went wrong
@@ -75,8 +75,10 @@ bool zeroAxis()
     y2.setCurrentPosition(0);
     y2.moveTo(resetAmt);
 
-    x = 0;
-    y = 0;
+    x_pos = 0;
+    y_pos = 0;
+
+    return true;
 }
 
 void setup()
@@ -97,7 +99,7 @@ void setup()
     pinMode(Y2_SWITCH_PORT, INPUT_PULLUP);
 
     zeroAxis();
-    z = 2;
+    z_pos = 2;
 }
 
 // returns num cm represented by a given num steps in cartesian axis's
@@ -110,4 +112,12 @@ double cmFromSteps(int steps)
 int stepsFromCm(double cm)
 {
     return (int)cm * CART_STEPS_PER_CM;
+}
+
+// moves pen to given position
+// 0 = full up, 1 = half up, 2 = down
+// return true if move successful, false otherwise
+bool movePenToPos(int pos)
+{
+    int movAmt = pos - z_pos;
 }
