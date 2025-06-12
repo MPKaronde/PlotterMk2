@@ -259,16 +259,65 @@ bool runToPointByCm(double x_cm, double y_cm)
 }
 
 // parses and executes a given command, communicates with user
+// return command execution state, false if command not known
 bool parseCommand(String command)
 {
     int space1 = command.indexOf(" ");
-    String identifier;
-    if (space1 == -1)
+    String identifier = command;
+    if (space1 != -1)
     {
-        identifier = command;
+        identifier = command.substring(0, space1);
     }
+
+    // z =  zero axis
+    if (command == "z")
+    {
+        return zeroAxis();
+    }
+    // xbs = move x by steps
+    if (command == "xbs")
+    {
+        int numSteps = command.substring(space1).toInt();
+        return moveXBySteps(numSteps);
+    }
+    // ybs = move y by steps
+    else if (command == "ybs")
+    {
+        int numSteps = command.substring(space1).toInt();
+        return moveYBySteps(numSteps);
+    }
+    // rtp = run to point (steps)
+    else if (command == "rtp")
+    {
+        int space2 = command.indexOf(" ", space1);
+        int xSteps = command.substring(space1, space2).toInt();
+        int ySteps = command.substring(space2).toInt();
+        return runToPoint(xSteps, ySteps);
+    }
+    // xbcm = move x by cm
+    else if (command == "xbcm")
+    {
+        int numSteps = command.substring(space1).toDouble();
+        return moveXByCm(numSteps);
+    }
+    // ybcm = move y by cm
+    else if (command == "ybcm")
+    {
+        int numSteps = command.substring(space1).toDouble();
+        return moveYByCm(numSteps);
+    }
+    // rtpcm
+    else if (command == "rtpcm")
+    {
+        int space2 = command.indexOf(" ", space1);
+        int xSteps = command.substring(space1, space2).toDouble();
+        int ySteps = command.substring(space2).toDouble();
+        return runToPointByCm(xSteps, ySteps);
+    }
+    // unknown command
     else
     {
-        identifier = command.substring(0, space1 - 1);
+        return false;
     }
+    return true;
 }
