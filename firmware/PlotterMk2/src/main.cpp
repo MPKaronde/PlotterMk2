@@ -63,6 +63,19 @@ bool zeroAxis()
             y2.moveTo(stepAmt);
         }
 
+        while (x.distanceToGo() != 0)
+        {
+            x.run();
+        }
+        while (y1.distanceToGo() != 0)
+        {
+            y1.run();
+        }
+        while (y2.distanceToGo() != 0)
+        {
+            y2.run();
+        }
+
         bool x_zeroed = digitalRead(X_SWITCH_PORT) == LOW;
         bool y1_zeroed = digitalRead(Y1_SWITCH_PORT) == LOW;
         bool y2_zeroed = digitalRead(Y2_SWITCH_PORT) == LOW;
@@ -114,10 +127,92 @@ int stepsFromCm(double cm)
     return (int)cm * CART_STEPS_PER_CM;
 }
 
+/*
+Lowest Level Control Commands: The following commands interact directly with the motors via the accelstepper library.
+Additionally, they update machine state accordingly to their movements.
+All other motor manipulation should be done through these methods to avoid future headache
+*/
+
 // moves pen to given position
 // 0 = full up, 1 = half up, 2 = down
 // return true if move successful, false otherwise
 bool movePenToPos(int pos)
 {
+    // illegal position
+    if (pos < 0 || pos > 2)
+    {
+        return false;
+    }
     int movAmt = pos - z_pos;
+    z.setCurrentPosition(0);
+    z.moveTo(movAmt * Z_HALF_DIST);
+    while (z.distanceToGo() != 0)
+    {
+        z.run();
+    }
+    z_pos = pos;
+    return true;
 }
+
+// moves x by given number of steps
+// if bump switch hit, return false and return to original position
+bool moveXBySteps(int steps)
+{
+    x.setCurrentPosition(0);
+    x.moveTo(steps);
+    while (x.distanceToGo() != 0)
+    {
+        x.run();
+    }
+
+    // bump switch collided, return to original position and error out
+    if (digitalRead(X_SWITCH_PORT) == LOW)
+    {
+        x.moveTo(-steps);
+        while (x.distanceToGo() != 0)
+        {
+            x.run();
+        }
+        return false;
+    }
+
+    x_pos += steps;
+    return true;
+}
+
+// moves both y by given number of steps
+// if either bump switch is hit, return false and return to original position
+bool moveYBySteps(int steps)
+{
+    y1.setCurrentPosition(0);
+    y2.setCurrentPosition(0);
+    y1.moveTo(steps);
+    y2.moveTo(steps);
+    while (y1.distanceToGo() != 0 || y2.distanceToGo() != 0)
+    {
+        y1.run();
+        y2.run();
+    }
+
+    // bump switch collided, return to original position and error out
+    if (digitalRead(Y1_SWITCH_PORT) == LOW || digitalRead(Y2_SWITCH_PORT) == LOW)
+    {
+        y1.moveTo(-steps);
+        y2.moveTo(-steps);
+        while (y1.distanceToGo() != 0 || y2.distanceToGo() != 0)
+        {
+            y1.run();
+            y2.run();
+        }
+        return false;
+    }
+
+    y_pos += steps;
+    return true;
+}
+
+/*
+End of the Lowest Level Control Commands.
+From here on out, NOTHING should directly interact with AccelStepper.
+All Movement commands go through the above methods instead.
+*/
