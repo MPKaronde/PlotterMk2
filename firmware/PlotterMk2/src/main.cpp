@@ -4,6 +4,7 @@
 // some useful facts
 #define INTEGER_MAX_VAL 32767
 #define INTEGER_MIN_VAL -32768
+#define BAUD_RATE 9600
 
 // Motor constants
 #define HALFSTEP 4
@@ -96,6 +97,9 @@ bool zeroAxis()
 
 void setup()
 {
+    // sets up serial
+    Serial.begin(9600);
+
     // Motor setup
     x.setAcceleration(CARTESIAN_ACCEL);
     y1.setAcceleration(CARTESIAN_ACCEL);
@@ -155,7 +159,7 @@ bool movePenToPos(int pos)
 }
 
 // moves x by given number of steps
-// if bump switch hit, return false and return to original position
+// if bump switch hit, return false and stop
 bool moveXBySteps(int steps)
 {
     x.setCurrentPosition(0);
@@ -163,17 +167,12 @@ bool moveXBySteps(int steps)
     while (x.distanceToGo() != 0)
     {
         x.run();
-    }
 
-    // bump switch collided, return to original position and error out
-    if (digitalRead(X_SWITCH_PORT) == LOW)
-    {
-        x.moveTo(-steps);
-        while (x.distanceToGo() != 0)
+        // bump switch collided / bounds reached, exit
+        if (digitalRead(X_SWITCH_PORT) == LOW)
         {
-            x.run();
+            return false;
         }
-        return false;
     }
 
     x_pos += steps;
@@ -181,7 +180,7 @@ bool moveXBySteps(int steps)
 }
 
 // moves both y by given number of steps
-// if either bump switch is hit, return false and return to original position
+// if either bump switch is hit, return false and stop
 bool moveYBySteps(int steps)
 {
     y1.setCurrentPosition(0);
@@ -192,22 +191,43 @@ bool moveYBySteps(int steps)
     {
         y1.run();
         y2.run();
-    }
-
-    // bump switch collided, return to original position and error out
-    if (digitalRead(Y1_SWITCH_PORT) == LOW || digitalRead(Y2_SWITCH_PORT) == LOW)
-    {
-        y1.moveTo(-steps);
-        y2.moveTo(-steps);
-        while (y1.distanceToGo() != 0 || y2.distanceToGo() != 0)
+        // bump switch collided, exit
+        if (digitalRead(Y1_SWITCH_PORT) == LOW || digitalRead(Y2_SWITCH_PORT) == LOW)
         {
-            y1.run();
-            y2.run();
+            return false;
         }
-        return false;
     }
 
     y_pos += steps;
+    return true;
+}
+
+// moves x and y simultaneously to their expected positions
+// stop and return false if bump switch hit
+bool runToPoint(int x_steps, int y_steps)
+{
+    x.setCurrentPosition(0);
+    y1.setCurrentPosition(0);
+    y2.setCurrentPosition(0);
+    x.moveTo(x_steps);
+    y1.moveTo(y_steps);
+    y2.moveTo(y_steps);
+
+    while (x.distanceToGo() != 0 || y1.distanceToGo() != 0 || y2.distanceToGo() != 0)
+    {
+        x.run();
+        y1.run();
+        y2.run();
+
+        // bound hit, exit
+        if (digitalRead(X_SWITCH_PORT) == LOW || digitalRead(Y1_SWITCH_PORT) == LOW || digitalRead(Y2_SWITCH_PORT) == LOW)
+        {
+            return false;
+        }
+    }
+
+    x_pos += x_steps;
+    y_pos += y_steps;
     return true;
 }
 
@@ -216,3 +236,24 @@ End of the Lowest Level Control Commands.
 From here on out, NOTHING should directly interact with AccelStepper.
 All Movement commands go through the above methods instead.
 */
+
+// move x by a given number of cm
+// if bump switch hit, stops and return false
+bool moveXByCm(double cm)
+{
+    return moveXBySteps(stepsFromCm(cm));
+}
+
+// move y by a given number of cm
+// if bump switch hit, stops and return false
+bool moveYByCm(double cm)
+{
+    return moveYBySteps(stepsFromCm(cm));
+}
+
+// move x and y simultaneously by given number of cm
+// if bump switch hit, stops and return false
+bool runToPointByCm(double x_cm, double y_cm)
+{
+    return runToPoint(stepsFromCm(x_cm), stepsFromCm(y_cm));
+}
