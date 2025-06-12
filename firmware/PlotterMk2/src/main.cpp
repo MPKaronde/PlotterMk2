@@ -257,3 +257,18 @@ bool runToPointByCm(double x_cm, double y_cm)
 {
     return runToPoint(stepsFromCm(x_cm), stepsFromCm(y_cm));
 }
+
+// parses and executes a given command, communicates with user
+bool parseCommand(String command)
+{
+    int space1 = command.indexOf(" ");
+    String identifier;
+    if (space1 == -1)
+    {
+        identifier = command;
+    }
+    else
+    {
+        identifier = command.substring(0, space1 - 1);
+    }
+}
